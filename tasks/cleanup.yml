@@ -1,0 +1,11 @@
+---
+# TODO: this doesn't seem to shutdown correctly
+- service: name=tinc state=stopped
+
+- name: "Cleanup hosts file"
+  lineinfile: dest=/etc/hosts regexp='.*\.{{ tinc_netname }}$' state=absent
+
+- file: path=/etc/tinc/{{ tinc_netname }}/ state=absent mode=0755 
+
+- lineinfile: dest="/etc/tinc/nets.boot" line="{{ tinc_netname }}" state=absent
+
