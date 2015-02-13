@@ -57,12 +57,14 @@
 - lineinfile: dest="/etc/tinc/nets.boot" line="{{ tinc_netname }}" state=present
   notify: restart_tinc
 
+- service: name=tinc state=started
+
 # The facts aren't available on first run, so copy over all the ip addresses
 - file: path=/etc/tinc/{{ tinc_netname }}/tmp state=directory mode=0755 recurse=true
 - copy: src="{{ tinc_tmpdir}}/{{ tinc_netname }}/ip/" dest="/etc/tinc/{{ tinc_netname }}/tmp"
 
 - name: "Build hosts file"
-  lineinfile: dest=/etc/hosts regexp='.*{{ item }}$' line="{{ lookup('file', item) }} {{ item | basename }}.{{ tinc_netname }}" state=present
+  lineinfile: dest=/etc/hosts regexp='.*{{ item | basename}}.{{ tinc_netname }}$' line="{{ lookup('file', item) }} {{ item | basename }}.{{ tinc_netname }}" state=present
   with_fileglob:
     - "/etc/tinc/{{ tinc_netname }}/tmp/*"
   tags: hostsfile
