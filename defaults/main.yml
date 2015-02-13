@@ -1,0 +1,7 @@
+---
+tinc_netname: test_network
+tinc_connectto:
+  host1: 8.8.8.8
+  host2: 8.8.4.4
+tinc_subnet: 192.168.10.0/24
+tinc_tmpdir: /tmp/ansible/tinc

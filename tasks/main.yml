@@ -1,0 +1,66 @@
+---
+- apt: name={{ item }} state=installed
+  with_items:
+    - runit
+    - tinc
+    - rsync
+  when: ansible_os_family == 'Debian'
+
+- file: path=/etc/tinc/{{ tinc_netname }}/hosts state=directory mode=0755 recurse=true
+- shell: tincd -n {{ tinc_netname }} -K4096
+  args:
+    creates: "/etc/tinc/{{ tinc_netname }}/rsa_key.priv"
+
+- file: path={{ tinc_tmpdir }}/{{ tinc_netname }}/pubkeys state=directory recurse=true 
+  delegate_to: localhost
+  sudo: false
+- file: path={{ tinc_tmpdir }}/{{ tinc_netname }}/ip state=directory recurse=true 
+  delegate_to: localhost
+  sudo: false
+- file: path={{ tinc_tmpdir }}/{{ tinc_netname }}/current state=directory recurse=true 
+  delegate_to: localhost
+  sudo: false
+
+- fetch: src=/etc/tinc/{{ tinc_netname }}/ansible_ipaddress dest={{ tinc_tmpdir }}/{{ tinc_netname }}/ip/{{ ansible_hostname }} flat=yes
+  ignore_errors: yes
+
+- fetch: src=/etc/tinc/{{ tinc_netname }}/rsa_key.pub dest={{ tinc_tmpdir }}/{{ tinc_netname }}/pubkeys/{{ ansible_hostname }} flat=yes
+  ignore_errors: yes
+
+# Set an ipaddress for each host in set if they don't have already
+- script: setip.py {{ tinc_tmpdir }}/{{ tinc_netname }}/pubkeys {{ tinc_tmpdir }}/{{ tinc_netname }}/ip {{ tinc_subnet }}
+  tags: test
+  register: ip_output
+  delegate_to: localhost
+
+- debug: var=ip_output
+  tags: test
+
+- template: src=host_configuration.j2 dest="{{ tinc_tmpdir }}/{{ tinc_netname }}/current/{{ ansible_hostname }}"
+  tags: test
+  delegate_to: localhost
+
+- template: src=tinc.conf.j2 dest="/etc/tinc/{{ tinc_netname }}/tinc.conf" mode=0644
+  notify: restart_tinc
+
+- template: src=tinc-up.j2 dest="/etc/tinc/{{ tinc_netname }}/tinc-up" mode=0755
+  notify: restart_tinc
+
+- template: src=tinc-down.j2 dest="/etc/tinc/{{ tinc_netname }}/tinc-down" mode=0755
+  notify: restart_tinc
+
+- copy: src="{{ tinc_tmpdir}}/{{ tinc_netname }}/ip/{{ ansible_hostname }}" dest="/etc/tinc/{{ tinc_netname }}/ansible_ipaddress"
+
+- copy: src="{{ tinc_tmpdir }}/{{ tinc_netname }}/current/" dest="/etc/tinc/{{ tinc_netname }}/hosts/"
+  notify: restart_tinc
+
+- lineinfile: dest="/etc/tinc/nets.boot" line="{{ tinc_netname }}" state=present
+  notify: restart_tinc
+
+- name: "Build hosts file"
+  lineinfile: dest=/etc/hosts regexp='.*{{ item }}$' line="{{ hostvars[item]['ansible_' + tinc_netname]['ipv4']['address'] }} {{ hostvars[item]['ansible_hostname']}}.{{ tinc_netname }}" state=present
+  with_items: play_hosts
+  tags: hostsfile
+
+- file: dest="{{ tinc_tmpdir }}/{{ tinc_netname }}" state=absent
+  delegate_to: localhost

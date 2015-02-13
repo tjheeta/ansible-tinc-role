@@ -1,0 +1,4 @@
+#!/bin/sh
+{% set ip_file = tinc_tmpdir + "/" + tinc_netname + "/ip/" +  ansible_hostname %}
+ifconfig $INTERFACE {{ lookup('file', ip_file ) }}/{{ tinc_subnet.split('/')[1] }}
+
