@@ -2,5 +2,6 @@
 {% set pubkey_file = tinc_tmpdir + "/" + tinc_netname + "/pubkeys/" +  ansible_hostname %}
 Address = {{ inventory_hostname }} 
 Subnet = {{ lookup('file', ip_file ) }}/32 
+Port = {{ tinc_port }}
 
 {{ lookup('file', pubkey_file) }}

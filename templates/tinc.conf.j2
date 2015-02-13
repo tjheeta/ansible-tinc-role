@@ -3,4 +3,4 @@ Device = /dev/net/tun
 {% for host, ip in tinc_connectto.iteritems() %}
 ConnectTo = {{ host }}
 {% endfor %}
-
+Port = {{ tinc_port }}
