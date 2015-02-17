@@ -1,3 +1,4 @@
 ---
+# TODO: The service doesn't appear to restart correctly sometimes
 - name: restart_tinc
   service: name=tinc state=restarted

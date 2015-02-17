@@ -1,5 +1,6 @@
 ---
 tinc_netname: test_network
+tinc_state: present
 tinc_connectto:
   host1: 8.8.8.8
   host2: 8.8.4.4
