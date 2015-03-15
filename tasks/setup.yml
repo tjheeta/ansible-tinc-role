@@ -57,7 +57,12 @@
 - lineinfile: dest="/etc/tinc/nets.boot" line="{{ tinc_netname }}" state=present
   notify: restart_tinc
 
-- service: name=tinc state=started
+# setup runit
+- file: path=/etc/tinc/{{ tinc_netname }}/runit/log state=directory recurse=true
+- file: path=/var/log/tinc_{{ tinc_netname }}/ state=directory mode=0755
+- copy: dest="/etc/tinc/{{ tinc_netname }}/runit/run" mode=0755 content="#!/bin/sh\nexec tincd -n {{ tinc_netname }} -D"
+- copy: dest="/etc/tinc/{{ tinc_netname }}/runit/log/run" mode=0755 content="#!/bin/sh\nexec svlogd -tt /var/log/tinc_{{ tinc_netname }}"
+- file: src="/etc/tinc/{{ tinc_netname }}/runit" dest="/etc/service/tinc_{{ tinc_netname }}" state=link
 
 # The facts aren't available on first run, so copy over all the ip addresses
 - file: path=/etc/tinc/{{ tinc_netname }}/tmp state=directory mode=0755 recurse=true

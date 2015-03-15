@@ -1,4 +1,4 @@
 ---
 # TODO: The service doesn't appear to restart correctly sometimes
 - name: restart_tinc
-  service: name=tinc state=restarted
+  shell: sv restart /etc/service/tinc_{{ tinc_netname }}
