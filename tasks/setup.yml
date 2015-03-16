@@ -1,9 +1,4 @@
 ---
-- apt: name={{ item }} state=installed
-  with_items:
-    - runit
-  when: ansible_os_family == 'Debian'
-
 - file: path=/etc/tinc/{{ tinc_netname }}/hosts state=directory mode=0755 recurse=true
 - shell: tincd -n {{ tinc_netname }} -K4096
   args:
@@ -20,15 +15,15 @@
 # Make directories to figure out the ip addresses and keys to distribute
 - file: path={{ tinc_tmpdir }}/{{ tinc_netname }}/pubkeys state=directory recurse=true 
   delegate_to: localhost
-  ignore_errors: yes
+  run_once: true
   sudo: false
 - file: path={{ tinc_tmpdir }}/{{ tinc_netname }}/ip state=directory recurse=true 
   delegate_to: localhost
-  ignore_errors: yes
+  run_once: true
   sudo: false
 - file: path={{ tinc_tmpdir }}/{{ tinc_netname }}/current state=directory recurse=true 
   delegate_to: localhost
-  ignore_errors: yes
+  run_once: true
   sudo: false
 
 # Fetch the ip addresses and keys from the hosts
@@ -91,4 +86,4 @@
 # Delete the temporary directory
 - file: dest="{{ tinc_tmpdir }}/{{ tinc_netname }}" state=absent
   delegate_to: localhost
-  ignore_errors: yes
+  run_once: true
