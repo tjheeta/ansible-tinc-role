@@ -17,19 +17,23 @@
 - unarchive: src=tinc-{{ ansible_architecture }}.tar.gz dest=/etc/tinc/ mode=0755
   when: tinc_static_binary
 
+# Make directories to figure out the ip addresses and keys to distribute
 - file: path={{ tinc_tmpdir }}/{{ tinc_netname }}/pubkeys state=directory recurse=true 
   delegate_to: localhost
+  ignore_errors: yes
   sudo: false
 - file: path={{ tinc_tmpdir }}/{{ tinc_netname }}/ip state=directory recurse=true 
   delegate_to: localhost
+  ignore_errors: yes
   sudo: false
 - file: path={{ tinc_tmpdir }}/{{ tinc_netname }}/current state=directory recurse=true 
   delegate_to: localhost
+  ignore_errors: yes
   sudo: false
 
+# Fetch the ip addresses and keys from the hosts
 - fetch: src=/etc/tinc/{{ tinc_netname }}/ansible_ipaddress dest={{ tinc_tmpdir }}/{{ tinc_netname }}/ip/{{ ansible_hostname }} flat=yes
   ignore_errors: yes
-
 - fetch: src=/etc/tinc/{{ tinc_netname }}/rsa_key.pub dest={{ tinc_tmpdir }}/{{ tinc_netname }}/pubkeys/{{ ansible_hostname }} flat=yes
   ignore_errors: yes
 
@@ -39,13 +43,14 @@
   register: ip_output
   delegate_to: localhost
 
-- debug: var=ip_output
-  tags: test
-
 - template: src=host_configuration.j2 dest="{{ tinc_tmpdir }}/{{ tinc_netname }}/current/{{ ansible_hostname }}"
   tags: test
   delegate_to: localhost
 
+- debug: var=ip_output
+  tags: test
+
+# Setup the hosts
 - template: src=tinc.conf.j2 dest="/etc/tinc/{{ tinc_netname }}/tinc.conf" mode=0644
   notify: restart_tinc
 
@@ -55,6 +60,7 @@
 - template: src=tinc-down.j2 dest="/etc/tinc/{{ tinc_netname }}/tinc-down" mode=0755
   notify: restart_tinc
 
+# Store the ipaddress for the host
 - copy: src="{{ tinc_tmpdir}}/{{ tinc_netname }}/ip/{{ ansible_hostname }}" dest="/etc/tinc/{{ tinc_netname }}/ansible_ipaddress"
 
 - copy: src="{{ tinc_tmpdir }}/{{ tinc_netname }}/current/" dest="/etc/tinc/{{ tinc_netname }}/hosts/"
@@ -82,6 +88,7 @@
     - "/etc/tinc/{{ tinc_netname }}/tmp/*"
   tags: hostsfile
 
+# Delete the temporary directory
 - file: dest="{{ tinc_tmpdir }}/{{ tinc_netname }}" state=absent
   delegate_to: localhost
   ignore_errors: yes
