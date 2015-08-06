@@ -48,10 +48,12 @@
 - script: setip.py {{ tinc_tmpdir }}/{{ tinc_netname }}/pubkeys {{ tinc_tmpdir }}/{{ tinc_netname }}/ip {{ tinc_subnet }}
   tags: test
   register: ip_output
+  sudo: false
   delegate_to: localhost
 
 - template: src=host_configuration.j2 dest="{{ tinc_tmpdir }}/{{ tinc_netname }}/current/{{ ansible_hostname }}"
   tags: test
+  sudo: false
   delegate_to: localhost
 
 - debug: var=ip_output
@@ -91,4 +93,5 @@
 # Delete the temporary directory
 - file: dest="{{ tinc_tmpdir }}/{{ tinc_netname }}" state=absent
   delegate_to: localhost
+  sudo: false
   run_once: true
