@@ -74,20 +74,22 @@
 # setup runit
 - file: path=/etc/tinc/{{ tinc_netname }}/runit/log state=directory recurse=true
 - file: path=/var/log/tinc_{{ tinc_netname }}/ state=directory mode=0755
-- copy: dest="/etc/tinc/{{ tinc_netname }}/runit/run" mode=0755 content="#!/bin/sh\nexport PATH=/etc/tinc/bin:$PATH\nexec 2>&1\nexec tincd -n mesh -c /etc/tinc/mesh --pidfile=/etc/tinc/mesh/runit/pid -D"
+- copy: dest="/etc/tinc/{{ tinc_netname }}/runit/run" mode=0755 content="#!/bin/sh\nexport PATH=/etc/tinc/bin:$PATH\nexec 2>&1\nexec tincd -n {{ tinc_netname }} -c /etc/tinc/{{ tinc_netname }} --pidfile=/etc/tinc/{{ tinc_netname }}/runit/pid -D"
   notify: restart_tinc
 - copy: dest="/etc/tinc/{{ tinc_netname }}/runit/log/run" mode=0755 content="#!/bin/sh\nexec svlogd -tt /var/log/tinc_{{ tinc_netname }}"
   notify: restart_tinc
 - file: src="/etc/tinc/{{ tinc_netname }}/runit" dest="/etc/service/tinc_{{ tinc_netname }}" state=link
 
-# The facts aren't available on first run, so copy over all the ip addresses
-- file: path=/etc/tinc/{{ tinc_netname }}/tmp state=directory mode=0755 recurse=true
-- copy: src="{{ tinc_tmpdir}}/{{ tinc_netname }}/ip/" dest="/etc/tinc/{{ tinc_netname }}/tmp"
+- wait_for: path=/proc/sys/net/ipv4/conf/{{ tinc_netname }}/forwarding
+- wait_for: path=/etc/tinc/{{ tinc_netname }}/runit/pid
+
+- name: Re-execute setup
+  setup:
+  tags: hostsfile
 
 - name: "Build hosts file"
-  lineinfile: dest=/etc/hosts regexp='.*{{ item | basename}}.{{ tinc_netname }}$' line="{{ lookup('file', item) }} {{ item | basename }}.{{ tinc_netname }}" state=present
-  with_fileglob:
-    - "/etc/tinc/{{ tinc_netname }}/tmp/*"
+  lineinfile: dest=/etc/hosts regexp='.*{{ hostvars[item]['ansible_hostname'] }}.{{ tinc_netname }}$' line="{{ hostvars[item]['ansible_' + tinc_netname]['ipv4']['address'] }} {{ hostvars[item]['ansible_hostname'] }}.{{ tinc_netname }}" state=present
+  with_items: play_hosts
   tags: hostsfile
 
 # Delete the temporary directory
