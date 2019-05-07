@@ -8,13 +8,17 @@
 # Install the static binary if available
 - unarchive: src=tinc-{{ ansible_architecture }}.tar.gz dest=/etc/tinc/ mode=0755
   when: tinc_static_binary
+  ignore_errors: yes
 - file: src="/etc/tinc/bin/tincd" dest="/usr/local/bin/tincd" state=link
   when: tinc_static_binary
   ignore_errors: yes
 
+- stat: path=/etc/tinc/bin/tincd
+  register: tinc_binary_installed
+
 # Install the tinc package from repo if available
 - apt: name=tinc state=installed
-  when: not tinc_static_binary
+  when: not tinc_static_binary or not tinc_binary_installed.stat.exists
 
 # This sets up the original keys and copies it to a default location for later use
 # /etc/tinc/{{ tinc_netname }}/rsa_key.pub and /etc/tinc/{{ tinc_netname }}/rsa_key.priv
@@ -28,15 +32,15 @@
 - file: path={{ tinc_tmpdir }}/{{ tinc_netname }}/pubkeys state=directory recurse=true 
   delegate_to: localhost
   run_once: true
-  sudo: false
+  become: false
 - file: path={{ tinc_tmpdir }}/{{ tinc_netname }}/ip state=directory recurse=true 
   delegate_to: localhost
   run_once: true
-  sudo: false
+  become: false
 - file: path={{ tinc_tmpdir }}/{{ tinc_netname }}/current state=directory recurse=true 
   delegate_to: localhost
   run_once: true
-  sudo: false
+  become: false
 
 # Fetch the ip addresses and keys from the hosts
 - fetch: src=/etc/tinc/{{ tinc_netname }}/ansible_ipaddress dest={{ tinc_tmpdir }}/{{ tinc_netname }}/ip/{{ ansible_hostname }} flat=yes
@@ -48,12 +52,12 @@
 - script: setip.py {{ tinc_tmpdir }}/{{ tinc_netname }}/pubkeys {{ tinc_tmpdir }}/{{ tinc_netname }}/ip {{ tinc_subnet }}
   tags: test
   register: ip_output
-  sudo: false
+  become: false
   delegate_to: localhost
 
 - template: src=host_configuration.j2 dest="{{ tinc_tmpdir }}/{{ tinc_netname }}/current/{{ ansible_hostname }}"
   tags: test
-  sudo: false
+  become: false
   delegate_to: localhost
 
 - debug: var=ip_output
@@ -89,11 +93,11 @@
 
 - name: "Build hosts file"
   lineinfile: dest=/etc/hosts regexp='.*{{ hostvars[item]['ansible_hostname'] }}.{{ tinc_netname }}$' line="{{ hostvars[item]['ansible_' + tinc_netname]['ipv4']['address'] }} {{ hostvars[item]['ansible_hostname'] }}.{{ tinc_netname }}" state=present
-  with_items: play_hosts
+  with_items: "{{ play_hosts }}"
   tags: hostsfile
 
 # Delete the temporary directory
 - file: dest="{{ tinc_tmpdir }}/{{ tinc_netname }}" state=absent
   delegate_to: localhost
-  sudo: false
+  become: false
   run_once: true

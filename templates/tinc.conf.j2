@@ -1,6 +1,6 @@
 Name = {{ ansible_hostname }}
 Device = /dev/net/tun
-{% for host, ip in tinc_connectto.iteritems() %}
+{% for host in tinc_connectto %}
 ConnectTo = {{ host }}
 {% endfor %}
 Port = {{ tinc_port }}
